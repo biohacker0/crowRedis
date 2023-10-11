@@ -1,9 +1,8 @@
 # crowRedis
 I built my own small simple memory datastore like redis to learn how it works internally and how databases are built , it has set,get, transactions (multi/exec ),persistence(snapshots, AOF) , concurrency support for all things and concurrent transactions , and lots of data structure support
 
-# crowRedis
+# [Blog](https://corvus-ikshana.hashnode.dev/building-a-simple-redis-like-data-store-crowredis-in-python)
 
-crowRedis is a simple Redis clone along with a Python client for interacting with it.
 
 ## Prerequisites
 

@@ -15,6 +15,8 @@ class RedisServer:
         self.in_transaction = False
         self.transaction_commands = []
         self.aof_enabled = False
+        self.current_transaction = []
+
 
         # Initialize with loading data from snapshot file
         self.load_snapshot()
@@ -180,8 +182,15 @@ class RedisServer:
 ################################ ayo, this is to handle those complex transactions, dont you dare mess this up 
 
     def handle_transaction(self, client_socket):
+        if self.in_transaction:
+            client_socket.send(b"ERROR: Nested transactions are not supported\n")
+            return
+
         self.in_transaction = True
         self.transaction_commands = []
+        self.current_transaction = []  # Initialize the current transaction
+
+        client_socket.send(b"OK\n")
 
         while True:
             request = client_socket.recv(1024).decode('utf-8')
@@ -195,24 +204,34 @@ class RedisServer:
                 print("Received EXEC command")
                 # Execute the transaction commands
                 result = self.execute_transaction()
-                client_socket.send(result.encode('utf-8'))
-                print(f"Sent result: {result}")
-                self.in_transaction = False
+                if result != "ERROR: Transaction contains unsupported commands\n":
+                    client_socket.send(result.encode('utf-8'))
+                    print(f"Sent result: {result}")
+                else:
+                    # Rollback the current transaction and discard it
+                    self.transaction_commands = []
+                    self.current_transaction = []
+                    client_socket.send(b"ERROR: Transaction failed and discarded\n")
+                    self.in_transaction = False
+                return
             elif command == "DISCARD":
                 print("Received DISCARD command")
-                # Discard the transaction
+                # Discard the current transaction
                 self.transaction_commands = []
+                self.current_transaction = []
                 client_socket.send(b"OK\n")
-                print("Sent OK response")
                 self.in_transaction = False
+                return
             elif command in ["LPUSH", "RPUSH", "LPOP", "RPOP"]:
                 print(f"Received transaction command: {request}")
                 # Add the command to the transaction
                 self.transaction_commands.append(request)
+                self.current_transaction.append(request)
             else:
-                return "ERROR: Transaction contains unsupported commands\n"
+                client_socket.send(b"ERROR: Transaction contains unsupported commands\n")
 
-    def execute_transaction(self):
+
+    def execute_transaction(self,client_socket):
         if not self.in_transaction:
             return "NO TRANSACTION\n"
 
@@ -222,7 +241,14 @@ class RedisServer:
                 parts = command.strip().split()
                 cmd = parts[0].upper()
 
-                if cmd == "SET":
+                if cmd == "DISCARD":
+                # Rollback the current transaction and discard it
+                    self.transaction_commands = []
+                    self.current_transaction = []  # Add this line
+                    client_socket.send(b"DISCARDED\n")
+                    self.in_transaction = False
+                    return
+                elif cmd == "SET":
                     key, value = parts[1], ' '.join(parts[2:])
                     self.data[key] = value
                 elif cmd == "GET":
@@ -257,6 +283,7 @@ class RedisServer:
                     return "ERROR: Transaction contains unsupported commands\n"
 
         self.transaction_commands = []
+        self.current_transaction = []  # Clear current transaction
         return result
     
     ##################### funtions for LPUSH,RPUSH,LPOP,RPOP,LRANGE with flages , ^^w^^

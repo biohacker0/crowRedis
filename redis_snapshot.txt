@@ -1,0 +1,2 @@
+SET name kunal
+SET nt n2

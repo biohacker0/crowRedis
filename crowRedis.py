@@ -78,38 +78,39 @@ class RedisServer:
                     client_socket, client_address = server_socket.accept()
                     print(f"Accepted connection from {client_address[0]}:{client_address[1]}")
 
-                    if self.is_master:
-                        # Handle slave registration here
-                        registration_message = client_socket.recv(8).decode('utf-8')
-                        print(f"reg msg received: {registration_message}")
-                        if registration_message == "REGISTER":
-                            # Add the connected slave socket to the list
-                            self.connected_slaves.append(client_socket)
-                            print(f"Slave registered from {client_address[0]}:{client_address[1]}")
-                            print(f"Number of connected slaves: {len(self.connected_slaves)}")
-                            print(f"Connected slaves: {self.connected_slaves}")
-                        else:
-                            print(f"Invalid registration from {client_address[0]}:{client_address[1]}")
+                    # if self.is_master:
+                    #     # Handle slave registration here
+                    #     registration_message = client_socket.recv(8).decode('utf-8')
+                    #     print(f"reg msg received: {registration_message}")
+                    #     if registration_message == "REGISTER":
+                    #         # Add the connected slave socket to the list
+                    #         self.connected_slaves.append(client_socket)
+                    #         print(f"Slave registered from {client_address[0]}:{client_address[1]}")
+                    #         print(f"Number of connected slaves: {len(self.connected_slaves)}")
+                    #         print(f"Connected slaves: {self.connected_slaves}")
+                    #     else:
+                    #         print(f"Invalid registration from {client_address[0]}:{client_address[1]}")
 
-                    threading.Thread(target=self.handle_client, args=(client_socket,)).start()
+                    threading.Thread(target=self.handle_client, args=(client_socket,client_address)).start()
                 except Exception as e:
                     print(f"Error accepting client connection: {e}")
 
 
             
 
-    def handle_client(self, client_socket):
+    def handle_client(self, client_socket,client_address):
         try:
             while True:
                 request = client_socket.recv(1024).decode('utf-8')
                 if not request:
                     break
-
+                if self.is_master and request == "REGISTER":
+                    self.handle_slave_registration(client_socket,client_address)
                 parts = request.strip().split()
                 command = parts[0].upper()
 
                 if command == "SET":
-                    self.handle_set(client_socket, parts)
+                    self.handle_set(client_socket, parts)              
                 elif command == "GET":
                     self.handle_get(client_socket, parts)
                 elif command == "DEL":
@@ -139,6 +140,17 @@ class RedisServer:
             print(f"Error handling client: {e}")
         finally:
             client_socket.close()
+            
+
+    def handle_slave_registration(self, client_socket,client_address):
+        # Handle slave registration here
+        logging.debug("handle_slave_registration called")
+        if self.is_master:
+            # Add the connected slave socket to the list
+            self.connected_slaves.append(client_socket)
+            logging.debug(f"Slave registered from {client_address[0]}:{client_address[1]}")
+            logging.debug(f"Number of connected slaves: {len(self.connected_slaves)}")
+            logging.debug(f"Connected slaves: {self.connected_slaves}")
 
     def handle_set(self, client_socket, parts):
         if len(parts) >= 3:
@@ -197,7 +209,7 @@ class RedisServer:
                     parts = line.strip().split()
                     if len(parts) >= 3 and parts[0] == "SET":
                         key, value = parts[1], ' '.join(parts[2:])
-                        self.data[key] = value
+                        self.data[key] = value  
         except FileNotFoundError:
             pass
 

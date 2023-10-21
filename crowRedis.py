@@ -150,9 +150,11 @@ class RedisServer:
                     log_entry = f"SET {key} {value}"
                     self.log_queue.put(log_entry)
                     logging.debug(f"Queued log entry: {log_entry}")  # Add a debug message
-            client_socket.send(b"OK\n")
+            if client_socket is not None:
+                client_socket.send(b"OK\n")
         else:
-            client_socket.send(b"Invalid SET command\n")
+            if client_socket is not None:
+              client_socket.send(b"Invalid SET command\n")
             
     
 
@@ -453,8 +455,9 @@ class RedisServer:
                 logging.error("Connection with master reset. Reconnecting...")
                 
             except Exception as e:
-                logging.error(f"Error replicating data from master: {e}")
-                return  # Stop replication thread if an error occurs
+                logging.debug(f"Slave socket - {self.slave_socket}" )
+                logging.error(f"Error replicating data from master: {e}") # Stop replication thread if an error occurs
+                return
 
 
     def apply_replication_data(self, data):

@@ -1,9 +1,14 @@
 import socket
 import threading
 import time
+import queue
+import logging
+import concurrent.futures
+
+logging.basicConfig(filename='server.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class RedisServer:
-    def __init__(self, host, port):
+    def __init__(self, host, port, is_master=True, master_address=None):
         self.host = host
         self.port = port
         self.data = {}  # Data store for key-value pairs
@@ -16,12 +21,52 @@ class RedisServer:
         self.transaction_commands = []
         self.aof_enabled = False
         self.current_transaction = []
+        self.is_master = is_master
+        self.master_address = master_address
+        self.slave_port = None
+        self.connected_slaves = []
+        self.log_queue = queue.Queue()
+        self.slave_socket = None
 
+        if is_master:
+        # Start the replication log thread on the master
+            self.enable_aof()
+            self.recover_from_aof()
+            self.start()
+        else:
+            self.enable_aof()
+            self.recover_from_aof()
+            # If this server is a slave, connect to the master and start replication
+            
 
         # Initialize with loading data from snapshot file
         self.load_snapshot()
 
     def start(self):
+        replication_thread = None
+
+        if self.is_master:
+            replication_thread = threading.Thread(target=self.run_replication_log, name='replication-thread')
+            print("master thread started")
+        else:
+            # If this server is a slave, connect to the master
+            try:
+                self.slave_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                master_host, master_port = self.master_address.split(':')
+                master_port = int(master_port)
+                self.slave_socket.connect((master_host, master_port))
+                self.slave_socket.send(b"REGISTER")
+                print(f"Connected to master server at {self.master_address}")
+                replication_thread = threading.Thread(target=self.replicate_data_from_master, name='slave-replication-thread')
+                print("slave thread started")
+            except Exception as e:
+                print(f"Error connecting to master: {e}")
+                # Handle errors, e.g., by setting self.slave_socket to None
+                return
+
+        # Start the replication thread
+        replication_thread.start()
+
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
             server_socket.bind((self.host, self.port))
             server_socket.listen()
@@ -32,9 +77,26 @@ class RedisServer:
                 try:
                     client_socket, client_address = server_socket.accept()
                     print(f"Accepted connection from {client_address[0]}:{client_address[1]}")
+
+                    if self.is_master:
+                        # Handle slave registration here
+                        registration_message = client_socket.recv(8).decode('utf-8')
+                        print(f"reg msg received: {registration_message}")
+                        if registration_message == "REGISTER":
+                            # Add the connected slave socket to the list
+                            self.connected_slaves.append(client_socket)
+                            print(f"Slave registered from {client_address[0]}:{client_address[1]}")
+                            print(f"Number of connected slaves: {len(self.connected_slaves)}")
+                            print(f"Connected slaves: {self.connected_slaves}")
+                        else:
+                            print(f"Invalid registration from {client_address[0]}:{client_address[1]}")
+
                     threading.Thread(target=self.handle_client, args=(client_socket,)).start()
                 except Exception as e:
                     print(f"Error accepting client connection: {e}")
+
+
+            
 
     def handle_client(self, client_socket):
         try:
@@ -77,8 +139,6 @@ class RedisServer:
             print(f"Error handling client: {e}")
         finally:
             client_socket.close()
-            
-############# basic stuff to set,get, delete data from RAM, bit simlistic for now. 
 
     def handle_set(self, client_socket, parts):
         if len(parts) >= 3:
@@ -86,9 +146,15 @@ class RedisServer:
             with self.lock:
                 self.data[key] = value
                 self.append_to_aof(f"SET {key} {value}")
+                if self.is_master:
+                    log_entry = f"SET {key} {value}"
+                    self.log_queue.put(log_entry)
+                    logging.debug(f"Queued log entry: {log_entry}")  # Add a debug message
             client_socket.send(b"OK\n")
         else:
             client_socket.send(b"Invalid SET command\n")
+            
+    
 
     def handle_get(self, client_socket, parts):
         if len(parts) == 2:
@@ -111,8 +177,6 @@ class RedisServer:
                     client_socket.send(b"0\n")  # Key not found
         else:
             client_socket.send(b"Invalid DEL command\n")
-            
-########## this are is for our persistance funtionality , like snapshot and AOF ,big bois stuff hehe
 
     def handle_save(self, client_socket):
         with self.lock:
@@ -178,8 +242,6 @@ class RedisServer:
 
             except FileNotFoundError:
                 pass
-            
-################################ ayo, this is to handle those complex transactions, dont you dare mess this up 
 
     def handle_transaction(self, client_socket):
         if self.in_transaction:
@@ -202,13 +264,11 @@ class RedisServer:
 
             if command == "EXEC":
                 print("Received EXEC command")
-                # Execute the transaction commands
                 result = self.execute_transaction()
                 if result != "ERROR: Transaction contains unsupported commands\n":
                     client_socket.send(result.encode('utf-8'))
                     print(f"Sent result: {result}")
                 else:
-                    # Rollback the current transaction and discard it
                     self.transaction_commands = []
                     self.current_transaction = []
                     client_socket.send(b"ERROR: Transaction failed and discarded\n")
@@ -216,7 +276,6 @@ class RedisServer:
                 return
             elif command == "DISCARD":
                 print("Received DISCARD command")
-                # Discard the current transaction
                 self.transaction_commands = []
                 self.current_transaction = []
                 client_socket.send(b"OK\n")
@@ -224,14 +283,12 @@ class RedisServer:
                 return
             elif command in ["LPUSH", "RPUSH", "LPOP", "RPOP"]:
                 print(f"Received transaction command: {request}")
-                # Add the command to the transaction
                 self.transaction_commands.append(request)
                 self.current_transaction.append(request)
             else:
                 client_socket.send(b"ERROR: Transaction contains unsupported commands\n")
 
-
-    def execute_transaction(self,client_socket):
+    def execute_transaction(self):
         if not self.in_transaction:
             return "NO TRANSACTION\n"
 
@@ -242,9 +299,8 @@ class RedisServer:
                 cmd = parts[0].upper()
 
                 if cmd == "DISCARD":
-                # Rollback the current transaction and discard it
                     self.transaction_commands = []
-                    self.current_transaction = []  # Add this line
+                    self.current_transaction = []
                     client_socket.send(b"DISCARDED\n")
                     self.in_transaction = False
                     return
@@ -283,10 +339,8 @@ class RedisServer:
                     return "ERROR: Transaction contains unsupported commands\n"
 
         self.transaction_commands = []
-        self.current_transaction = []  # Clear current transaction
+        self.current_transaction = []
         return result
-    
-    ##################### funtions for LPUSH,RPUSH,LPOP,RPOP,LRANGE with flages , ^^w^^
 
     def handle_lpush(self, client_socket, parts):
         if len(parts) >= 3:
@@ -355,8 +409,80 @@ class RedisServer:
         else:
             client_socket.send(b"Invalid LRANGE command\n")
 
+
+    def run_replication_log(self):
+        while True:
+            try:
+                if self.log_queue.empty() == False:
+                    logging.debug(f"Queued log entry: run_replication_log ran")
+                    log_entry = self.log_entry = self.log_queue.get()  # Get log entry from the queue with a 
+                    logging.debug(f"log entry data 392:{log_entry}")
+                    self.send_replication_log(log_entry)  # Send the log entry to connected slave
+                    logging.debug(f"sent data to send_replication_log funtion")
+            except Exception as E:
+                logging.debug(f"Queue entry 390:{E}")
+
+
+    def send_replication_log(self, log_entry):
+        logging.debug("send_replication_log called")
+        logging.debug(f"Number of connected slaves: {len(self.connected_slaves)}")
+        logging.debug(f"Connected slaves: {self.connected_slaves}")
+
+        # Send the replication log data to connected slaves
+        for slave_socket in self.connected_slaves:
+            try:
+                logging.debug(f"Sending data to slave: {log_entry}")
+                slave_socket.send(log_entry.encode('utf-8'))
+                logging.debug("Data sent to slave successfully")
+            except Exception as e:
+                logging.error(f"Error sending replication data to slave: {e}")
+
+
+    def replicate_data_from_master(self):
+        logging.debug("replicate_data_from_master called")
+        while True:
+            try:
+                data = self.slave_socket.recv(1024).decode('utf-8')
+                if data:
+                    logging.debug(f"Received data from master: {data}")
+                    # Process the received data and apply replication
+                    self.apply_replication_data(data)
+                else:
+                    logging.debug("No data received from master")
+            except ConnectionResetError:
+                logging.error("Connection with master reset. Reconnecting...")
+                
+            except Exception as e:
+                logging.error(f"Error replicating data from master: {e}")
+                return  # Stop replication thread if an error occurs
+
+
+    def apply_replication_data(self, data):
+        logging.debug(f"apply_replication_data funtion called 437:: {data}")
+        parts = data.strip().split()
+        command = parts[0].upper()
+
+        if command == "SET":
+            self.handle_set(None, parts)
+           
+                
+        # Handle other replication commands as needed
+
 if __name__ == "__main__":
-    redis_server = RedisServer('127.0.0.1', 6381)
-    redis_server.enable_aof()  # Enable AOF for logging and recovery
-    redis_server.recover_from_aof()  # Recover data from the AOF file
+    is_master = input("Are you running as a master (y/n)? ").lower() == 'y'
+
+    if is_master:
+        host = '127.0.0.1'
+        port = 6381
+        master_address = None
+        slave_port = None
+        redis_server = RedisServer(host, port, is_master, master_address)
+    else:
+        master_address = '127.0.0.1:6381'
+        host = '127.0.0.1'
+        slave_port = 6382
+        redis_server = RedisServer(host, slave_port, is_master, master_address)
+        
     redis_server.start()
+
+

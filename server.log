@@ -1,0 +1,18 @@
+2023-10-21 19:54:03,970 - DEBUG - Queued log entry: SET ooozpzp saaa
+2023-10-21 19:54:03,970 - DEBUG - Queued log entry: run_replication_log ran
+2023-10-21 19:54:03,971 - DEBUG - log entry data 392:SET ooozpzp saaa
+2023-10-21 19:54:03,971 - DEBUG - send_replication_log called
+2023-10-21 19:54:03,971 - DEBUG - Number of connected slaves: 1
+2023-10-21 19:54:03,971 - DEBUG - Connected slaves: [<socket.socket fd=424, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 6381), raddr=('127.0.0.1', 65072)>]
+2023-10-21 19:54:03,971 - DEBUG - Sending data to slave: SET ooozpzp saaa
+2023-10-21 19:54:03,971 - DEBUG - Data sent to slave successfully
+2023-10-21 19:54:03,971 - DEBUG - sent data to send_replication_log funtion
+2023-10-21 19:55:42,008 - DEBUG - Queued log entry: SET ooozadxzczxpzp saaa
+2023-10-21 19:55:42,008 - DEBUG - Queued log entry: run_replication_log ran
+2023-10-21 19:55:42,008 - DEBUG - log entry data 392:SET ooozadxzczxpzp saaa
+2023-10-21 19:55:42,008 - DEBUG - send_replication_log called
+2023-10-21 19:55:42,008 - DEBUG - Number of connected slaves: 1
+2023-10-21 19:55:42,008 - DEBUG - Connected slaves: [<socket.socket fd=424, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 6381), raddr=('127.0.0.1', 65072)>]
+2023-10-21 19:55:42,009 - DEBUG - Sending data to slave: SET ooozadxzczxpzp saaa
+2023-10-21 19:55:42,009 - DEBUG - Data sent to slave successfully
+2023-10-21 19:55:42,009 - DEBUG - sent data to send_replication_log funtion

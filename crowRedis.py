@@ -77,20 +77,6 @@ class RedisServer:
                 try:
                     client_socket, client_address = server_socket.accept()
                     print(f"Accepted connection from {client_address[0]}:{client_address[1]}")
-
-                    # if self.is_master:
-                    #     # Handle slave registration here
-                    #     registration_message = client_socket.recv(8).decode('utf-8')
-                    #     print(f"reg msg received: {registration_message}")
-                    #     if registration_message == "REGISTER":
-                    #         # Add the connected slave socket to the list
-                    #         self.connected_slaves.append(client_socket)
-                    #         print(f"Slave registered from {client_address[0]}:{client_address[1]}")
-                    #         print(f"Number of connected slaves: {len(self.connected_slaves)}")
-                    #         print(f"Connected slaves: {self.connected_slaves}")
-                    #     else:
-                    #         print(f"Invalid registration from {client_address[0]}:{client_address[1]}")
-
                     threading.Thread(target=self.handle_client, args=(client_socket,client_address)).start()
                 except Exception as e:
                     print(f"Error accepting client connection: {e}")
@@ -257,6 +243,8 @@ class RedisServer:
             except FileNotFoundError:
                 pass
 
+################################################Transaction Part ####################################################
+
     def handle_transaction(self, client_socket):
         if self.in_transaction:
             client_socket.send(b"ERROR: Nested transactions are not supported\n")
@@ -302,7 +290,7 @@ class RedisServer:
             else:
                 client_socket.send(b"ERROR: Transaction contains unsupported commands\n")
 
-    def execute_transaction(self):
+    def execute_transaction(self,client_socket):
         if not self.in_transaction:
             return "NO TRANSACTION\n"
 
@@ -313,8 +301,9 @@ class RedisServer:
                 cmd = parts[0].upper()
 
                 if cmd == "DISCARD":
+                # Rollback the current transaction and discard it
                     self.transaction_commands = []
-                    self.current_transaction = []
+                    self.current_transaction = []  # Add this line
                     client_socket.send(b"DISCARDED\n")
                     self.in_transaction = False
                     return
@@ -353,8 +342,10 @@ class RedisServer:
                     return "ERROR: Transaction contains unsupported commands\n"
 
         self.transaction_commands = []
-        self.current_transaction = []
+        self.current_transaction = []  # Clear current transaction
         return result
+
+####################################LPUSH,LPOP,RPUSH,RPOP etc part####################################################################
 
     def handle_lpush(self, client_socket, parts):
         if len(parts) >= 3:
@@ -423,6 +414,7 @@ class RedisServer:
         else:
             client_socket.send(b"Invalid LRANGE command\n")
 
+##############################################The distrtibuted computing Data-replication part##################################
 
     def run_replication_log(self):
         while True:

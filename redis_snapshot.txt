@@ -1,5 +1,3 @@
-SET ppepe ppee
-SET itiee isi
-SET oioia asa
-SET popppi ppo
-SET finAl tTet
+SET k1 v1
+SET k2 v2
+SET k3 v4

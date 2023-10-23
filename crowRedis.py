@@ -23,10 +23,10 @@ class RedisServer:
         self.current_transaction = []
         self.is_master = is_master
         self.master_address = master_address
-        self.slave_port = None
-        self.connected_slaves = []
+        self.worker_port = None
+        self.connected_workers = []
         self.log_queue = queue.Queue()
-        self.slave_socket = None
+        self.worker_socket = None
 
         if is_master:
         # Start the replication log thread on the master
@@ -36,7 +36,7 @@ class RedisServer:
         else:
             self.enable_aof()
             self.recover_from_aof()
-            # If this server is a slave, connect to the master and start replication
+            # If this server is a worker, connect to the master and start replication
             
 
         # Initialize with loading data from snapshot file
@@ -49,19 +49,19 @@ class RedisServer:
             replication_thread = threading.Thread(target=self.run_replication_log, name='replication-thread')
             print("master thread started")
         else:
-            # If this server is a slave, connect to the master
+            # If this server is a worker, connect to the master
             try:
-                self.slave_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.worker_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 master_host, master_port = self.master_address.split(':')
                 master_port = int(master_port)
-                self.slave_socket.connect((master_host, master_port))
-                self.slave_socket.send(b"REGISTER")
+                self.worker_socket.connect((master_host, master_port))
+                self.worker_socket.send(b"REGISTER")
                 print(f"Connected to master server at {self.master_address}")
-                replication_thread = threading.Thread(target=self.replicate_data_from_master, name='slave-replication-thread')
-                print("slave thread started")
+                replication_thread = threading.Thread(target=self.replicate_data_from_master, name='worker-replication-thread')
+                print("worker thread started")
             except Exception as e:
                 print(f"Error connecting to master: {e}")
-                # Handle errors, e.g., by setting self.slave_socket to None
+                # Handle errors, e.g., by setting self.worker_socket to None
                 return
 
         # Start the replication thread
@@ -91,7 +91,7 @@ class RedisServer:
                 if not request:
                     break
                 if self.is_master and request == "REGISTER":
-                    self.handle_slave_registration(client_socket,client_address)
+                    self.handle_worker_registration(client_socket,client_address)
                 parts = request.strip().split()
                 command = parts[0].upper()
 
@@ -128,15 +128,15 @@ class RedisServer:
             client_socket.close()
             
 
-    def handle_slave_registration(self, client_socket,client_address):
-        # Handle slave registration here
-        logging.debug("handle_slave_registration called")
+    def handle_worker_registration(self, client_socket,client_address):
+        # Handle worker registration here
+        logging.debug("handle_worker_registration called")
         if self.is_master:
-            # Add the connected slave socket to the list
-            self.connected_slaves.append(client_socket)
+            # Add the connected worker socket to the list
+            self.connected_workers.append(client_socket)
             logging.debug(f"Slave registered from {client_address[0]}:{client_address[1]}")
-            logging.debug(f"Number of connected slaves: {len(self.connected_slaves)}")
-            logging.debug(f"Connected slaves: {self.connected_slaves}")
+            logging.debug(f"Number of connected workers: {len(self.connected_workers)}")
+            logging.debug(f"Connected workers: {self.connected_workers}")
 
     def handle_set(self, client_socket, parts):
         if len(parts) >= 3:
@@ -423,7 +423,7 @@ class RedisServer:
                     logging.debug(f"Queued log entry: run_replication_log ran")
                     log_entry = self.log_entry = self.log_queue.get()  # Get log entry from the queue with a 
                     logging.debug(f"log entry data 392:{log_entry}")
-                    self.send_replication_log(log_entry)  # Send the log entry to connected slave
+                    self.send_replication_log(log_entry)  # Send the log entry to connected worker
                     logging.debug(f"sent data to send_replication_log funtion")
             except Exception as E:
                 logging.debug(f"Queue entry 390:{E}")
@@ -431,24 +431,24 @@ class RedisServer:
 
     def send_replication_log(self, log_entry):
         logging.debug("send_replication_log called")
-        logging.debug(f"Number of connected slaves: {len(self.connected_slaves)}")
-        logging.debug(f"Connected slaves: {self.connected_slaves}")
+        logging.debug(f"Number of connected workers: {len(self.connected_workers)}")
+        logging.debug(f"Connected workers: {self.connected_workers}")
 
-        # Send the replication log data to connected slaves
-        for slave_socket in self.connected_slaves:
+        # Send the replication log data to connected workers
+        for worker_socket in self.connected_workers:
             try:
-                logging.debug(f"Sending data to slave: {log_entry}")
-                slave_socket.send(log_entry.encode('utf-8'))
-                logging.debug("Data sent to slave successfully")
+                logging.debug(f"Sending data to worker: {log_entry}")
+                worker_socket.send(log_entry.encode('utf-8'))
+                logging.debug("Data sent to worker successfully")
             except Exception as e:
-                logging.error(f"Error sending replication data to slave: {e}")
+                logging.error(f"Error sending replication data to worker: {e}")
 
 
     def replicate_data_from_master(self):
         logging.debug("replicate_data_from_master called")
         while True:
             try:
-                data = self.slave_socket.recv(1024).decode('utf-8')
+                data = self.worker_socket.recv(1024).decode('utf-8')
                 if data:
                     logging.debug(f"Received data from master: {data}")
                     # Process the received data and apply replication
@@ -459,7 +459,7 @@ class RedisServer:
                 logging.error("Connection with master reset. Reconnecting...")
                 
             except Exception as e:
-                logging.debug(f"Slave socket - {self.slave_socket}" )
+                logging.debug(f"Slave socket - {self.worker_socket}" )
                 logging.error(f"Error replicating data from master: {e}") # Stop replication thread if an error occurs
                 return
 
@@ -479,17 +479,17 @@ if __name__ == "__main__":
     is_master = input("Are you running as a master (y/n)? ").lower() == 'y'
 
     if is_master:
-        host = '127.0.0.1'
+        host = '127.0.0.1'     # This is the folder-1 where I am running this script as master. ok :3
         port = 6381
         master_address = None
-        slave_port = None
+        worker_port = None
         redis_server = RedisServer(host, port, is_master, master_address)
     else:
         master_address = '127.0.0.1:6381'
         host = '127.0.0.1'
-        slave_port = 6382
-        redis_server = RedisServer(host, slave_port, is_master, master_address)
+        worker_port = 6382
+        redis_server = RedisServer(host, worker_port, is_master, master_address)
         
-    redis_server.start()
+    redis_server.start()   # In terminal you can see three connection, one form client and 2 others of worker-1 worker-2 instances
 
 

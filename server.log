@@ -1,0 +1,40 @@
+2023-10-23 18:40:37,014 - DEBUG - handle_worker_registration called
+2023-10-23 18:40:37,029 - DEBUG - Slave registered from 127.0.0.1:62020
+2023-10-23 18:40:37,045 - DEBUG - Number of connected workers: 1
+2023-10-23 18:40:37,062 - DEBUG - Connected workers: [<socket.socket fd=476, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 6381), raddr=('127.0.0.1', 62020)>]
+2023-10-23 18:40:57,145 - DEBUG - Queued log entry: SET k1 v1
+2023-10-23 18:40:57,145 - DEBUG - Queued log entry: run_replication_log ran
+2023-10-23 18:40:57,145 - DEBUG - log entry data 392:SET k1 v1
+2023-10-23 18:40:57,145 - DEBUG - send_replication_log called
+2023-10-23 18:40:57,145 - DEBUG - Number of connected workers: 1
+2023-10-23 18:40:57,146 - DEBUG - Connected workers: [<socket.socket fd=476, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 6381), raddr=('127.0.0.1', 62020)>]
+2023-10-23 18:40:57,146 - DEBUG - Sending data to worker: SET k1 v1
+2023-10-23 18:40:57,146 - DEBUG - Data sent to worker successfully
+2023-10-23 18:40:57,146 - DEBUG - sent data to send_replication_log funtion
+2023-10-23 18:40:59,974 - DEBUG - Queued log entry: SET k2 v2
+2023-10-23 18:40:59,974 - DEBUG - Queued log entry: run_replication_log ran
+2023-10-23 18:40:59,975 - DEBUG - log entry data 392:SET k2 v2
+2023-10-23 18:40:59,975 - DEBUG - send_replication_log called
+2023-10-23 18:40:59,975 - DEBUG - Number of connected workers: 1
+2023-10-23 18:40:59,975 - DEBUG - Connected workers: [<socket.socket fd=476, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 6381), raddr=('127.0.0.1', 62020)>]
+2023-10-23 18:40:59,975 - DEBUG - Sending data to worker: SET k2 v2
+2023-10-23 18:40:59,975 - DEBUG - Data sent to worker successfully
+2023-10-23 18:40:59,975 - DEBUG - sent data to send_replication_log funtion
+2023-10-23 18:41:20,905 - DEBUG - Queued log entry: SET k3 v4
+2023-10-23 18:41:20,905 - DEBUG - Queued log entry: run_replication_log ran
+2023-10-23 18:41:20,905 - DEBUG - log entry data 392:SET k3 v4
+2023-10-23 18:41:20,905 - DEBUG - send_replication_log called
+2023-10-23 18:41:20,905 - DEBUG - Number of connected workers: 1
+2023-10-23 18:41:20,905 - DEBUG - Connected workers: [<socket.socket fd=476, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 6381), raddr=('127.0.0.1', 62020)>]
+2023-10-23 18:41:20,905 - DEBUG - Sending data to worker: SET k3 v4
+2023-10-23 18:41:20,906 - DEBUG - Data sent to worker successfully
+2023-10-23 18:41:20,906 - DEBUG - sent data to send_replication_log funtion
+2023-10-23 18:41:35,119 - DEBUG - Queued log entry: SET k5 v5
+2023-10-23 18:41:35,119 - DEBUG - Queued log entry: run_replication_log ran
+2023-10-23 18:41:35,119 - DEBUG - log entry data 392:SET k5 v5
+2023-10-23 18:41:35,119 - DEBUG - send_replication_log called
+2023-10-23 18:41:35,119 - DEBUG - Number of connected workers: 1
+2023-10-23 18:41:35,119 - DEBUG - Connected workers: [<socket.socket fd=476, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 6381), raddr=('127.0.0.1', 62020)>]
+2023-10-23 18:41:35,120 - DEBUG - Sending data to worker: SET k5 v5
+2023-10-23 18:41:35,120 - DEBUG - Data sent to worker successfully
+2023-10-23 18:41:35,120 - DEBUG - sent data to send_replication_log funtion

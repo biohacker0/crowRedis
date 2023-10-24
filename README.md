@@ -40,61 +40,21 @@ To run this key-value store in master/worker mode and enable data replication, f
 2. Start the master server using the following command:
    ```bash
    python crowRedis.py
+   
 
-
-Creating a GitHub README to explain how the data replication works and provide instructions for running the code in master/worker mode is a great idea. Below is a template for your GitHub README:
-
-markdown
-Copy code
-# Distributed Key-Value Store with Data Replication
-
-This Python script implements a distributed key-value store with support for data replication. It can be run in both master and worker modes to enable replication between servers. Here's an overview of how data replication works and how to run it:
-
-## Data Replication
-
-### Replication Overview
-
-Data replication in this key-value store is designed to ensure that multiple servers stay synchronized with each other. This can be useful for building distributed and fault-tolerant systems.
-
-#### Components
-
-- **Master Server**: The server that holds the authoritative data and logs all changes.
-- **Worker Servers**: Servers that connect to the master server to replicate data and stay up-to-date.
-
-### How Replication Works
-
-1. The master server logs executed commands to an AOF (Append-Only File) and adds them to a log queue.
-2. Worker servers connect to the master and continuously fetch commands from the log queue.
-3. The worker servers apply these commands to their local data store, keeping it in sync with the master.
-
-## Running in Master/Worker Mode
-
-To run this key-value store in master/worker mode and enable data replication, follow these steps:
-
-### Master Server
-
-1. Set up the master server with the following options:
-   - Host: Specify the IP address or hostname for the master server.
-   - Port: Choose a port number for the master server.
-   - Is Master: Set to "yes."
-
-2. Start the master server using the following command:
-   ```bash
-   python crowRedis.py
-
-### Worker Server
+Worker Server
 Set up the worker server with the following options:
 
-Master Address: Provide the address of the master server in the format "hostname:port."
-Host: Specify the IP address or hostname for the worker server.
-Port: Choose a port number for the worker server.
-Is Master: Set to "no."
-Start the worker server using the following command:
+- Master Address: Provide the address of the master server in the format "hostname:port."
+- Host: Specify the IP address or hostname for the worker server.
+- Port: Choose a port number for the worker server.
+- Is Master: Set to "no."
 
+Start the worker server using the following command:
    ```bash
    python crowRedis.py
 
-### Monitoring Data Replication
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Monitoring Data Replication
 You can monitor the data replication process by checking the log file named server.log. It records information about connected workers, sent and received data, and errors.
 To ensure proper network configuration, make sure the master and worker servers can communicate with each other.
-

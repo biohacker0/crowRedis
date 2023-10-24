@@ -3,158 +3,98 @@ I built my own small simple memory datastore like redis to learn how it works in
 
 # [Blog](https://corvus-ikshana.hashnode.dev/building-a-simple-redis-like-data-store-crowredis-in-python)
 
+This brach is specificallu made to test my data replication feature for crowRedis.
 
-## Prerequisites
+# Distributed Key-Value Store with Data Replication
 
-Before you can run crowRedis and the client, make sure you have the following prerequisites installed on your system:
+This Python script implements a distributed key-value store with support for data replication. It can be run in both master and worker modes to enable replication between servers. Here's an overview of how data replication works and how to run it:
 
-- Python (3.x recommended)
-- Socket library (should be included with Python
+## Data Replication
 
-# How To use this:
- -  After cloning , run the crowRedis.py file , its the server that will listen to all your requests.
- -  Then run the client.py file , its the client where you can write your queries like ex: set name myname , get name , del name.
- -  rest scripts are for benchmarks and logs and snapshot file will be created automatically
+### Replication Overview
 
-  ## Benchmark Test
- I compared crowRedis and postgressSQL and real Redis again each other for some parameters on same hardware to see what are the test results :
-- plz don't that this seriously, cause I am comparing a relational database with a memory database, but I wanted to see how much is a RAM-based database faster a disk-based one.
-- Also, real Redis use a very complex mechanism for set,get,del of data and, mine is way too simplistic, that's why it's doing so fast operations.
-- I am also learning things and might do some stupid comparisons so plz forgive me , I will learn what I don't know and improve ✌️
+Data replication in this key-value store is designed to ensure that multiple servers stay synchronized with each other. This can be useful for building distributed and fault-tolerant systems.
 
-| Benchmark | Time taken (seconds) | Database |
-|-----------|----------------------|----------|
-| INSERT    | 0.1802               | postgresSQL |
-| UPDATE    | 1.6753               | postgresSQL |
-| DELETE    | 0.2250               | postgresSQL |
-| TRANSACTIONS | 0.0680            | postgresSQL |
-| Throughput | 1470.95 transactions per second | postgresSQL |
-| Average response time | 0.0007 seconds | postgresSQL |
+#### Components
 
+- **Master Server**: The server that holds the authoritative data and logs all changes.
+- **Worker Servers**: Servers that connect to the master server to replicate data and stay up-to-date.
 
+### How Replication Works
 
-| **Metric**            | **Value**                          | **Database** |
-|-----------------------|------------------------------------|--------------|
-| Total time taken      | 0.021941661834716797 seconds       | crowRedis        |
-| Throughput            | 4557.54 transactions per second    | crowRedis        |
-| Average response time | 0.0002 seconds                     | crowRedis        |
-| Benchmark SET         | 1000 requests in 0.4349 seconds    | crowRedis        |
-| Benchmark GET         | 1000 requests in 0.0271 seconds    | crowRedis        |
-| Benchmark DEL         | 1000 requests in 0.0322 seconds    | crowRedis        |
+1. The master server logs executed commands to an AOF (Append-Only File) and adds them to a log queue.
+2. Worker servers connect to the master and continuously fetch commands from the log queue.
+3. The worker servers apply these commands to their local data store, keeping it in sync with the master.
 
+## Running in Master/Worker Mode
+
+To run this key-value store in master/worker mode and enable data replication, follow these steps:
+
+### Master Server
+
+1. Set up the master server with the following options:
+   - Host: Specify the IP address or hostname for the master server.
+   - Port: Choose a port number for the master server.
+   - Is Master: Set to "yes."
+
+2. Start the master server using the following command:
+   ```bash
+   python crowRedis.py
 
 
-| **Metric**            | **Value**                          | Database |
-|-----------------------|------------------------------------| ---------|
-| Total time taken      | 0.016948461532592773 seconds       | Redis  |
-| Throughput            | 5900.24 transactions per second    | Redis  |
-| Average response time | 0.0002 seconds                     | Redis  |
-| Benchmark SET         | 1000 requests in 0.0280 seconds    | Redis  |
-| Benchmark GET         | 1000 requests in 0.0320 seconds    | Redis  |
-| Benchmark DEL         | 1000 requests in 0.0315 seconds    | Redis  |
+Creating a GitHub README to explain how the data replication works and provide instructions for running the code in master/worker mode is a great idea. Below is a template for your GitHub README:
 
+markdown
+Copy code
+# Distributed Key-Value Store with Data Replication
 
-# Using the Redis Client(client.py)
+This Python script implements a distributed key-value store with support for data replication. It can be run in both master and worker modes to enable replication between servers. Here's an overview of how data replication works and how to run it:
 
-```markdown
-SET key value - Set the value of a key.  
-Example:  
-```redis
-SET mykey Hello
-```
+## Data Replication
 
-GET key - Get the value associated with a key.  
-Example:  
-```redis
-GET mykey
-```
+### Replication Overview
 
-DEL key - Delete a key and its associated value.  
-Example:  
-```redis
-DEL mykey
-```
+Data replication in this key-value store is designed to ensure that multiple servers stay synchronized with each other. This can be useful for building distributed and fault-tolerant systems.
 
-SAVE - Save data to a snapshot file.  
-Example:  
-```redis
-SAVE
-```
+#### Components
 
-MULTI - Start a transaction block.  
-Example:  
-```redis
-MULTI
-```
+- **Master Server**: The server that holds the authoritative data and logs all changes.
+- **Worker Servers**: Servers that connect to the master server to replicate data and stay up-to-date.
 
-EXEC - Execute the commands in a transaction.  
-Example:  
-```redis
-MULTI
-SET key1 value1
-SET key2 value2
-EXEC
-```
+### How Replication Works
 
-DISCARD - Discard the commands in a transaction.  
-Example:  
-```redis
-MULTI
-SET key1 value1
-DISCARD
-```
+1. The master server logs executed commands to an AOF (Append-Only File) and adds them to a log queue.
+2. Worker servers connect to the master and continuously fetch commands from the log queue.
+3. The worker servers apply these commands to their local data store, keeping it in sync with the master.
 
-LPUSH key value1 [value2 ...] - Insert one or more values at the beginning of a list.  
-Example:  
-```redis
-LPUSH mylist item1
-LPUSH mylist item2 item3
-```
+## Running in Master/Worker Mode
 
-RPUSH key value1 [value2 ...] - Append one or more values to the end of a list.  
-Example:  
-```redis
-RPUSH mylist item4
-RPUSH mylist item5 item6
-```
+To run this key-value store in master/worker mode and enable data replication, follow these steps:
 
-LPOP key - Remove and return the first element from a list.  
-Example:  
-```redis
-LPOP mylist
-```
+### Master Server
 
-RPOP key - Remove and return the last element from a list.  
-Example:  
-```redis
-RPOP mylist
-```
+1. Set up the master server with the following options:
+   - Host: Specify the IP address or hostname for the master server.
+   - Port: Choose a port number for the master server.
+   - Is Master: Set to "yes."
 
-LRANGE key start stop - Get a range of elements from a list.  
-Example:  
-```redis
-LRANGE mylist 0 2
-```
-```
+2. Start the master server using the following command:
+   ```bash
+   python crowRedis.py
 
-Once you have the client running, you can interact with the crowRedis server. Here's how the client works:
+### Worker Server
+Set up the worker server with the following options:
 
-To send a Redis command, enter it at the prompt and press Enter.
-To exit the client, type 'exit' and press Enter.
-Transaction Support
-You can also work with transactions using the following commands:
+Master Address: Provide the address of the master server in the format "hostname:port."
+Host: Specify the IP address or hostname for the worker server.
+Port: Choose a port number for the worker server.
+Is Master: Set to "no."
+Start the worker server using the following command:
 
-To start a transaction, enter 'MULTI'.
-Enter the transaction commands one by one.
-To execute the transaction, enter 'EXEC'.
-To discard the transaction, enter 'DISCARD'.
-The client will send these commands to the server and display the responses.
+   ```bash
+   python crowRedis.py
 
-Data Persistence
-crowRedis supports data persistence through snapshot files and an append-only file (AOF). It automatically saves data to a snapshot file at regular intervals and recovers data from the AOF file upon server startup.
+### Monitoring Data Replication
+You can monitor the data replication process by checking the log file named server.log. It records information about connected workers, sent and received data, and errors.
+To ensure proper network configuration, make sure the master and worker servers can communicate with each other.
 
-Transactions
-crowRedis allows you to group multiple commands into a transaction using the MULTI command. You can add commands to the transaction and then use EXEC to execute them or DISCARD to cancel the transaction.
-
-List Operations
-crowRedis supports list operations, including LPUSH, RPUSH, LPOP, RPOP, and LRANGE, allowing you to manipulate lists stored as values in the data store.

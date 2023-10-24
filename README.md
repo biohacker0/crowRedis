@@ -26,6 +26,10 @@ Data replication in this key-value store is designed to ensure that multiple ser
 2. Worker servers connect to the master and continuously fetch commands from the log queue.
 3. The worker servers apply these commands to their local data store, keeping it in sync with the master.
 
+### How to run the project:
+1 : clone the project twice and name one folder as instace-1 and other instance -2 , it will be easisy this way to test the feature.
+2 : run crowRedis.py in master mode in one instnace and other in worker mode and change the port no of woker in the instance-2 folder
+
 ## Running in Master/Worker Mode
 
 To run this key-value store in master/worker mode and enable data replication, follow these steps:

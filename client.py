@@ -4,7 +4,7 @@ class RedisClient:
     def __init__(self, host, port):
         self.host = host
         self.port = port
-        self.in_transaction = False  # lets Tracks whether we're in a transaction
+        self.in_transaction = False
 
     def connect(self):
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -33,7 +33,6 @@ if __name__ == "__main__":
             break
 
         if command.upper() == 'MULTI':
-            # Enters transaction mode
             client.in_transaction = True
             print("Entered transaction mode. Enter transaction commands.")
 
@@ -44,20 +43,36 @@ if __name__ == "__main__":
                     break
                 transaction_commands.append(transaction_command)
 
-            # Sends the transaction commands to the server
             for transaction_command in transaction_commands:
                 client.send_command(transaction_command)
                 response = client.receive_response()
                 print(response)
 
-            # we Exits from transaction mode
             client.in_transaction = False
         else:
-            if client.in_transaction:
-                print("Transaction commands are not sent until 'EXEC' is issued.")
-            else:
+            if command.startswith("SET") and "EX" in command.upper():
+                # SET command with TTL
+                client.send_command(command)
+                response = client.receive_response()
+            elif command.startswith("TTL"):
+                # TTL command
                 client.send_command(command)
                 response = client.receive_response()
                 print(response)
+            elif command.startswith("INCR") or command.startswith("DECR"):
+                # INCR or DECR command
+                client.send_command(command)
+                response = client.receive_response()
+                print(response)
+            else:
+                if client.in_transaction:
+                    print("Transaction commands are not sent until 'EXEC' is issued.")
+                else:
+                    client.send_command(command)
+                    response = client.receive_response()
+                    print(response)
 
     client.close()
+
+
+

@@ -1,6 +1,7 @@
 import socket
 import threading
 import time
+import heapq  # Import the heapq module for priority queue
 
 class RedisServer:
     def __init__(self, host, port):
@@ -16,6 +17,9 @@ class RedisServer:
         self.transaction_commands = []
         self.aof_enabled = False
         self.current_transaction = []
+        self.ttl_check_interval = 1  # TTL check interval in seconds
+        self.ttl_data = {} 
+
 
 
         # Initialize with loading data from snapshot file
@@ -33,6 +37,8 @@ class RedisServer:
                     client_socket, client_address = server_socket.accept()
                     print(f"Accepted connection from {client_address[0]}:{client_address[1]}")
                     threading.Thread(target=self.handle_client, args=(client_socket,)).start()
+                    self.ttl_thread = threading.Thread(target=self.check_ttl)
+                    self.ttl_thread.start()
                 except Exception as e:
                     print(f"Error accepting client connection: {e}")
 
@@ -66,6 +72,10 @@ class RedisServer:
                     self.handle_rpop(client_socket, parts)
                 elif command == "LRANGE":
                     self.handle_lrange(client_socket, parts)
+                elif command == "INCR":    
+                    self.handle_incr(client_socket, parts)  # Add this line
+                elif command == "DECR":
+                    self.handle_decr(client_socket, parts)  # Add this line
                 else:
                     client_socket.send(b"Invalid command\n")
 
@@ -78,17 +88,51 @@ class RedisServer:
         finally:
             client_socket.close()
             
-############# basic stuff to set,get, delete data from RAM, bit simlistic for now. 
+############# basic stuff to set,get, delete data from RAM, bit simlistic for now , TTL support added.  ############################# 
 
     def handle_set(self, client_socket, parts):
         if len(parts) >= 3:
             key, value = parts[1], ' '.join(parts[2:])
+            ttl = None
+            i = 2  # Start from the third element
+
+            while i < len(parts):
+                if parts[i].upper() == "EX" and i + 1 < len(parts):
+                    try:
+                        ttl = int(parts[i + 1])
+                        i += 2  # Skip both "EX" and TTL
+                    except ValueError:
+                        client_socket.send(b"Invalid TTL value\n")
+                        return
+                else:
+                    i += 1
+
             with self.lock:
                 self.data[key] = value
+                if ttl is not None:
+                    self.ttl_data[key] = time.time() + ttl  # Set TTL value
+                else:
+                    if key in self.ttl_data:
+                        del self.ttl_data[key]  # Remove any existing TTL for this key
                 self.append_to_aof(f"SET {key} {value}")
             client_socket.send(b"OK\n")
         else:
             client_socket.send(b"Invalid SET command\n")
+            
+    def check_ttl(self):
+        while True:
+            current_time = time.time()
+            keys_to_remove = [key for key, ttl in self.ttl_data.items() if ttl < current_time]
+            for key in keys_to_remove:
+                with self.lock:
+                    if key in self.data:
+                        del self.data[key]
+                    if key in self.ttl_data:
+                        del self.ttl_data[key]
+
+            # No need to send a response here,cause as it's a server-side operation
+            time.sleep(self.ttl_check_interval)
+
 
     def handle_get(self, client_socket, parts):
         if len(parts) == 2:
@@ -111,6 +155,44 @@ class RedisServer:
                     client_socket.send(b"0\n")  # Key not found
         else:
             client_socket.send(b"Invalid DEL command\n")
+            
+##############Atomic Increment and decrement #####################################################################
+
+            
+    def handle_incr(self, client_socket, parts):
+        if len(parts) == 2:
+            key = parts[1]
+            with self.lock:
+                if key in self.data:
+                    try:
+                        current_value = int(self.data[key])
+                    except ValueError:
+                        client_socket.send(b"ERROR: Value is not an integer\n")
+                        return
+                    self.data[key] = str(current_value + 1)
+                    client_socket.send(f"{self.data[key]}\n".encode('utf-8'))
+                else:
+                    client_socket.send(b"0\n")  # Key not found
+        else:
+            client_socket.send(b"Invalid INCR command\n")
+
+    def handle_decr(self, client_socket, parts):
+        if len(parts) == 2:
+            key = parts[1]
+            with self.lock:
+                if key in self.data:
+                    try:
+                        current_value = int(self.data[key])
+                    except ValueError:
+                        client_socket.send(b"ERROR: Value is not an integer\n")
+                        return
+                    self.data[key] = str(current_value - 1)
+                    client_socket.send(f"{self.data[key]}\n".encode('utf-8'))
+                else:
+                    client_socket.send(b"0\n")  # Key not found
+        else:
+            client_socket.send(b"Invalid DECR command\n")
+
             
 ########## this are is for our persistance funtionality , like snapshot and AOF ,big bois stuff hehe
 

@@ -1,6 +1,17 @@
-SET name kunal
-SET nt n1
-SET nt n2
-SET nh 1
-DEL nh
-SET ___ ___
+SET k1 v1
+SET k2 v3 EX 10
+SET b1 c1
+SET z1 x1
+SET n1 m1
+SET n2 m2 EX 5
+SET n3 m3 EX 5
+SET n4 m4 EX 10
+SET n5 m5
+SET key10 val100 dsajdksaj EX 10
+SET normal data
+SET normal data EX 10
+SET mycounter 0
+INCR mycounter
+DECR mycounter
+INCR mycounter
+SET count 0

@@ -1,5 +1,5 @@
 # crowRedis
-- I built my own small simple memory datastore like redis to learn how it works internally and how databases are built , it has set,get,del, transactions (multi/exec ),persistence(snapshots, AOF) , concurrency support for all things and concurrent transactions.
+- I built my own small simple in-memory datastore like redis to learn how it works internally and how databases are built , it has set,get,del, transactions (multi/exec ),persistence(snapshots, AOF) , concurrency support for all things and concurrent transactions.
 
 - For Data replication, check out dataReplication-1 branch
 

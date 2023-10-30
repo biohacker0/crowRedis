@@ -57,7 +57,7 @@ Before you can run crowRedis and the client, make sure you have the following pr
 
 # Using the Redis Client(client.py)
 
-```markdown
+
 SET key value - Set the value of a key.  
 Example:  
 ```redis

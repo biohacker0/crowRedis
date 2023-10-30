@@ -1,5 +1,32 @@
 # crowRedis
-I built my own small simple memory datastore like redis to learn how it works internally and how databases are built , it has set,get, transactions (multi/exec ),persistence(snapshots, AOF) , concurrency support for all things and concurrent transactions , and lots of data replication if you run the servers in master/worker mode
+I built my own small simple memory datastore like redis to learn how it works internally and how databases are built , it has set,get,del, transactions (multi/exec ),persistence(snapshots, AOF) , concurrency support for all things and concurrent transactions , and lots of data replication if you run the servers in master/worker mode.
+
+## Features
+
+- **Key-Value Storage**: Store and retrieve data as key-value pairs in the Redis server.
+
+- **Data Manipulation**: Supports common Redis commands such as `SET`, `GET`, and `DEL` for data manipulation.
+
+- **TTL (Time to Live)**: Set TTL for keys to automatically expire and remove them from the database after a specified time.
+
+- **Atomic Increment and Decrement**: Use `INCR` and `DECR` to increment and decrement integer values associated with keys.
+
+- **Transaction Support**: Execute multi-step transactions using the `MULTI`, `EXEC`, and `DISCARD` commands.
+
+- **Append-Only File (AOF) Logging**: Enable AOF for command logging and recovery. Recover data from the AOF file when the server restarts.
+
+
+```
+SET mykey myvalue             # Set a key-value pair
+GET mykey                    # Retrieve the value for a key
+INCR mycounter               # Increment a counter
+DECR mycounter               # Decrement a counter
+EXPIRE mykey 60              # Set a TTL for a key
+MULTI                        # Start a transaction
+SET key1 value1              # Add commands to the transaction
+SET key2 value2
+EXEC                         # Execute the transaction
+```
 
 # [Blog-1](https://corvus-ikshana.hashnode.dev/building-a-simple-redis-like-data-store-crowredis-in-python)
 # [Blog-2](https://corvus-ikshana.hashnode.dev/crowredis-data-replication-delving-into-distributed-systems)

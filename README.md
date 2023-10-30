@@ -70,6 +70,22 @@ Example:
 GET mykey
 ```
 
+Setting TTL (Time to Live) for a Key.
+```redis
+SET mykey 42 EX 60
+```
+
+Using INCR and DECR
+```redis
+# Increment a counter
+INCR page_views
+
+# Decrement a counter
+DECR stock_count
+
+```
+
+
 DEL key - Delete a key and its associated value.  
 Example:  
 ```redis
